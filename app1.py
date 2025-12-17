@@ -197,24 +197,28 @@ def forecast():
         start = max(0, stepz - 12)
         end = months + start
         
-        # MOCK MODE
-        if model is None:
-            # Generate enough dummy data to cover the request
-            # We need enough data to slice [start:end]
+        # TRY-CATCH for Model Prediction (Fallback to Mock if AI fails/crashes)
+        try:
+            if model is None:
+                raise Exception("Model not loaded")
+
+            if len(test_X.shape) == 2:
+                test_X = test_X.reshape((test_X.shape[0], 1, test_X.shape[1]))
+
+            last_obs = test_X[-1].reshape((1, test_X.shape[1], test_X.shape[2]))
+            
+            next_steps = forecast_next_steps(model, last_obs, scaler, steps=max(stepz, end))
+            result=next_steps[start:end]
+            
+            return jsonify({"forecast": result.tolist()})
+
+        except Exception as e:
+            print(f"AI Prediction Failed: {e}. Falling back to Mock Mode.")
+            # Fallback to Mock Data seamlessly
             needed = end
             full_mock_data = mock_forecast(steps=needed)
             result = full_mock_data[start:end]
-            return jsonify({"forecast": result, "note": "Mock data used (TensorFlow missing)"})
-
-        if len(test_X.shape) == 2:
-            test_X = test_X.reshape((test_X.shape[0], 1, test_X.shape[1]))
-
-        last_obs = test_X[-1].reshape((1, test_X.shape[1], test_X.shape[2]))
-        
-        next_steps = forecast_next_steps(model, last_obs, scaler, steps=max(stepz, end))
-        
-        result=next_steps[start:end]
-        return jsonify({"forecast": result.tolist()})
+            return jsonify({"forecast": result, "note": f"AI Error: {str(e)}. Using Mock Data."})
 
     except ValueError:
         return jsonify({"error": "Please enter valid numeric values."})
