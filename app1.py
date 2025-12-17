@@ -16,6 +16,11 @@ import random
 app = Flask(__name__)
 DB_NAME = 'water_demand.db'
 
+# Redirect root to Home
+@app.route('/')
+def index():
+    return render_template('Home_page.html')
+
 # Load your trained model
 try:
     if tf:
